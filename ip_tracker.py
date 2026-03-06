@@ -25,16 +25,14 @@ def is_valid_public_ip(ip_input):
         return False
 
 
-def get_ip_info(ip_adress=""):
+def get_ip_info(ip_address=""):
     # The public API we are using
-    url = f"http://ip-api.com/json/{ip_adress}"
+    url = f"http://ip-api.com/json/{ip_address}"
     print(f"[*] Establishing connection to {url}...")
 
     try:
-        response = urllib.request.urlopen(url)
-        raw_data = response.read().decode('utf-8')
-        return json.loads(raw_data)
-
+        with urllib.request.urlopen(url) as response:
+            return json.loads(response.read())
     except Exception as e:
         print(f"[!] Connection error: {e}")
         return None
