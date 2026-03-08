@@ -88,7 +88,7 @@ def process_file(file_path, blacklist=None):
             for line in file:
                 target_ip = line.strip()
 
-                if not target_ip:
+                if not target_ip or target_ip.startswith('#'):
                     continue
 
                 print(f"\n--- Researching: {target_ip} ---")
