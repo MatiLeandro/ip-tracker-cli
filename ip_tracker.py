@@ -45,9 +45,6 @@ def get_ip_info(ip_target=""):
 
 def print_info(ip_info, blacklist=None):
 
-    if blacklist is None:
-        blacklist = DEFAULT_BLACKLIST
-
     ip_response = ip_info.get('ip', 'N/A')
     country_response = ip_info.get('country', 'Unknown')
     region_response = ip_info.get('region', 'Unknown')
@@ -128,9 +125,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Load Custom Blacklist
-    active_blacklist = None
+    active_blacklist = DEFAULT_BLACKLIST
     if args.blacklist:
-        active_blacklist = load_custom_blacklist(args.blacklist)
+        loaded_list = load_custom_blacklist(args.blacklist)
+        if loaded_list is not None:
+            active_blacklist = loaded_list
 
     # Routing
     if args.file:
