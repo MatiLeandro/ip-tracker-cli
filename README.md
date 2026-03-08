@@ -7,11 +7,12 @@ Una herramienta de reconocimiento de red (OSINT) por línea de comandos, ligera 
 
 ## 🚀 Características (Features)
 
-* **Rastreo de objetivo:** Obtiene el país, ciudad, y Proveedor de Servicios de Internet (ISP) de cualquier dirección IP pública.
-* **Cero Dependencias:** Utiliza exclusivamente la biblioteca estándar de Python.
+* **Rastreo Avanzado:** Obtiene el país, región, ciudad, coordenadas exactas (Lat/Lon), Organización (ORG) y Proveedor de Servicios de Internet (ISP) de cualquier dirección IP pública.
+* **Comunicaciones Seguras (TLS):** Utiliza la API de `ipwho.is` a través de peticiones HTTPS nativas, evitando la intercepción de tráfico en redes inseguras (MITM).
+* **Cero Dependencias:** Utiliza exclusivamente la biblioteca estándar de Python (`urllib`, `json`, `ipaddress`).
 * **Validación Estricta (Zero Trust):** Incorpora un filtro de seguridad que bloquea automáticamente direcciones IP privadas (LAN), *loopback* y formatos inválidos.
 * **Inteligencia de Amenazas (Threat Intel):** Detecta automáticamente si la IP pertenece a un proveedor de nube, hosting o VPN (AWS, Azure, Tor, etc.).
-* **Análisis Masivo y Modularidad:** Permite analizar listas de IPs desde un archivo de texto e inyectar tus propias listas negras (blacklists) de ISPs sospechosos.
+* **Análisis Masivo Modular:** Permite analizar listas de IPs desde un archivo de texto e inyectar tus propias listas negras (blacklists) de ISPs sospechosos, integrando un sistema de *Rate Limiting* automático para evitar baneos.
 
 ## 🛠️ Instalación
 
