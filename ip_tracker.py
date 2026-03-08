@@ -4,6 +4,12 @@ import json
 import sys
 import ipaddress
 import argparse
+import time
+
+API_BASE_URL = 'https://ipwho.is/'
+API_TIMEOUT_SECS = 10
+
+RATE_LIMIT_DELAY = 1.5
 
 DEFAULT_BLACKLIST = ['amazon', 'aws', 'digitalocean', 'linode', 'hetzner', 
     'ovh', 'tor', 'cloudflare', 'google', 'vultr', 'choopa', 
@@ -25,13 +31,13 @@ def is_valid_public_ip(ip_input):
         return False
 
 
-def get_ip_info(ip_address=""):
+def get_ip_info(ip_target=""):
     # The public API we are using
-    url = f"http://ip-api.com/json/{ip_address}"
+    url = f"{API_BASE_URL}{ip_target}"
     print(f"[*] Establishing connection to {url}...")
 
     try:
-        with urllib.request.urlopen(url) as response:
+        with urllib.request.urlopen(url, timeout=API_TIMEOUT_SECS) as response:
             return json.loads(response.read())
     except Exception as e:
         print(f"[!] Connection error: {e}")
@@ -42,28 +48,37 @@ def print_info(ip_info, blacklist=None):
     if blacklist is None:
         blacklist = DEFAULT_BLACKLIST
 
-    query_response = ip_info.get('query', 'N/A')
+    ip_response = ip_info.get('ip', 'N/A')
     country_response = ip_info.get('country', 'Unknown')
+    region_response = ip_info.get('region', 'Unknown')
     city_response = ip_info.get('city', 'Unknown')
-    isp_response = ip_info.get('isp', 'Unknown')
+    
+    connection_info_response = ip_info.get('connection', {})
+    isp_response = connection_info_response.get('isp', 'Unknown')
+    org_response = connection_info_response.get('org', 'Unknown')
+
+    lat_response = ip_info.get('latitude', 'Unknown')
+    lon_response = ip_info.get('longitude', 'Unknown')
 
     print(f"""
-[+] Target IP: {query_response}
+[+] Target IP: {ip_response}
 [+] Country: {country_response}
+[+] Region: {region_response}
 [+] City: {city_response}
 [+] ISP: {isp_response}
-""")
+[+] ORG: {org_response}
+[+] Coordinates: {lat_response}, {lon_response}""")
 
     isp_lower = isp_response.lower()
 
     if any(keyword in isp_lower for keyword in blacklist):
-        print("     [!] WARNING: Datacenter or Cloud provider detected (Possible VPN/Proxy)")
+        print("\n[!] WARNING: Datacenter or Cloud provider detected (Possible VPN/Proxy)")
 
     print("-" * 50)
 
 def execute_ip_lookup(ip_target="", blacklist=None):
     result = get_ip_info(ip_target)
-    if result is not None and result.get('status') == 'success':
+    if result is not None and result.get('success'):
         print_info(result, blacklist)
     else:
         print(f"[!] Empty Information for IP: {ip_target if ip_target else 'Local'}")
@@ -83,6 +98,7 @@ def process_file(file_path, blacklist=None):
 
                 if is_valid_public_ip(target_ip):
                     execute_ip_lookup(target_ip, blacklist)
+                    time.sleep(RATE_LIMIT_DELAY)
 
     except FileNotFoundError:
         print(f"[!] Error: The file was not found: '{file_path}'")
