@@ -43,6 +43,10 @@ def get_ip_info(ip_target=""):
         print(f"[!] Connection error: {e}")
         return None
 
+def is_datacenter_isp(isp, blacklist):
+    isp_lower = isp.lower()
+    return any(keyword in isp_lower for keyword in blacklist)
+
 def print_info(ip_info, blacklist=None):
 
     ip_response = ip_info.get('ip', 'N/A')
@@ -66,9 +70,7 @@ def print_info(ip_info, blacklist=None):
 [+] ORG: {org_response}
 [+] Coordinates: {lat_response}, {lon_response}""")
 
-    isp_lower = isp_response.lower()
-
-    if any(keyword in isp_lower for keyword in blacklist):
+    if is_datacenter_isp(isp_response, blacklist):
         print("\n[!] WARNING: Datacenter or Cloud provider detected (Possible VPN/Proxy)")
 
     print("-" * 50)
