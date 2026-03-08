@@ -143,4 +143,12 @@ if __name__ == "__main__":
         execute_ip_lookup(args.input_ip, active_blacklist)
 
     else:
-        execute_ip_lookup("", active_blacklist)
+        print("\n[!] WARNING: You are about to query your local machine's public IP.")
+        print("This will expose your IP to a third-party API (ipwho.is).")
+        consent = input("Do you want to proceed? [y/N]: ").strip().lower()
+
+        if consent == 'y':
+            execute_ip_lookup("", active_blacklist)
+        else:
+            print("[*] Operation cancelled by the user. Stay safe.")
+            sys.exit(0)
