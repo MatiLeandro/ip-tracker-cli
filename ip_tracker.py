@@ -8,6 +8,7 @@ import time
 
 API_BASE_URL = 'https://ipwho.is/'
 API_TIMEOUT_SECS = 10
+API_SUCCESS_KEY = 'success'
 
 RATE_LIMIT_DELAY = 1.5
 
@@ -77,7 +78,7 @@ def print_info(ip_info, blacklist=None):
 
 def execute_ip_lookup(ip_target="", blacklist=None):
     result = get_ip_info(ip_target)
-    if result is not None and result.get('success'):
+    if result is not None and result.get(API_SUCCESS_KEY):
         print_info(result, blacklist)
     else:
         print(f"[!] Empty Information for IP: {ip_target if ip_target else 'Local'}")
