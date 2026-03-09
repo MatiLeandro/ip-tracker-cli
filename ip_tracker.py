@@ -85,6 +85,9 @@ def execute_ip_lookup(ip_target="", blacklist=None):
 
 def process_file(file_path, blacklist=None):
     print(f"[*] Reading IP file: {file_path}")
+    processed = 0
+    skipped = 0
+
     try:
         with open(file_path, 'r') as file:
 
@@ -98,7 +101,13 @@ def process_file(file_path, blacklist=None):
 
                 if is_valid_public_ip(target_ip):
                     execute_ip_lookup(target_ip, blacklist)
+                    processed += 1
                     time.sleep(RATE_LIMIT_DELAY)
+                else:
+                    skipped += 1
+
+        total = processed + skipped
+        print(f"\n[+] Done -- Processed: {processed} | Skipped: {skipped} | Total: {total}")
 
     except FileNotFoundError:
         print(f"[!] Error: The file was not found: '{file_path}'")
