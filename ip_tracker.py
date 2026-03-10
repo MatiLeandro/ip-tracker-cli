@@ -6,7 +6,11 @@ import ipaddress
 import argparse
 import time
 
-API_BASE_URL = 'https://ipwho.is/'
+API_ENDPOINTS = {
+        'ipwhois': 'https://ipwho.is/',
+        'ipapi': 'http://ip-api.com/json/'
+}
+
 API_TIMEOUT_SECS = 10
 API_SUCCESS_KEY = 'success'
 
@@ -16,6 +20,33 @@ DEFAULT_BLACKLIST = ['amazon', 'aws', 'digitalocean', 'linode', 'hetzner',
     'ovh', 'tor', 'cloudflare', 'google', 'vultr', 'choopa', 
     'microsoft', 'azure', 'alibaba', 'tencent', 'hosting', 'datacenter']
  
+def normalize_api_response(raw_data, api_engine):
+    normalized = {}
+    
+    if api_engine == 'ipwhois':
+        normalized['success'] = raw_data.get('success', False)
+        normalized['ip'] = raw_data.get('ip', 'N/A')
+        normalized['country'] = raw_data.get('country', 'Unknown')
+        normalized['region'] = raw_data.get('region', 'Unknown')
+        normalized['city'] = raw_data.get('city', 'Unknown')
+        normalized['isp'] = raw_data.get('connection', {}).get('isp', 'Unknown')
+        normalized['org'] = raw_data.get('connection', {}).get('org', 'Unknown')
+        normalized['latitude'] = raw_data.get('latitude', 'Unknown')
+        normalized['longitude'] = raw_data.get('longitude', 'Unknown')
+
+    elif api_engine == 'ipapi':
+        normalized['success'] = (raw_data.get('status') == 'success')
+        normalized['ip'] = raw_data.get('query', 'N/A')
+        normalized['country'] = raw_data.get('country', 'Unknown')
+        normalized['region'] = raw_data.get('regionName', 'Unknown')
+        normalized['city'] = raw_data.get('city', 'Unknown')
+        normalized['isp'] = raw_data.get('isp', 'Unknown')
+        normalized['org'] = raw_data.get('org', 'Unknown')
+        normalized['latitude'] = raw_data.get('lat', 'Unknown')
+        normalized['longitude'] = raw_data.get('lon', 'Unknown')
+
+    return normalized
+
 def is_valid_public_ip(ip_input):
     # Verify valid and public ip input
     try:
@@ -32,9 +63,9 @@ def is_valid_public_ip(ip_input):
         return False
 
 
-def get_ip_info(ip_target=""):
+def get_ip_info(ip_target="", api_engine='ipwhois'):
     # The public API we are using
-    url = f"{API_BASE_URL}{ip_target}"
+    url = f"{API_ENDPOINTS[api_engine]}{ip_target}"
     print(f"[*] Establishing connection to {url}...")
 
     try:
@@ -76,12 +107,20 @@ def print_info(ip_info, blacklist=None):
 
     print("-" * 50)
 
-def execute_ip_lookup(ip_target="", blacklist=None, verbose=False):
-    result = get_ip_info(ip_target)
-    if verbose and result:
-        print(f"\n[DEBUG] Raw API Response:\n{json.dumps(result, indent=2)}")
-    if result is not None and result.get(API_SUCCESS_KEY):
-        print_info(result, blacklist)
+def execute_ip_lookup(ip_target="", blacklist=None, verbose=False, api_engine='ipwhois'):
+    raw_result = get_ip_info(ip_target, api_engine)
+
+    if raw_result is not None:
+        if verbose:
+            print(f"\n[DEBUG] Raw API Response ({api_engine}):\n{json.dumps(raw_result, indent=2)}")
+    
+        # Pass the raw data through the Adapter
+        normalized_result = normalize_api_response(raw_result, api_engine)
+
+        if normalized_result.get(API_SUCCESS_KEY):
+            print_info(normalized_result, blacklist)
+        else:
+            print(f"[!] Target IP {ip_target} not found or invalid via {api_engine}.")
     else:
         print(f"[!] Empty Information for IP: {ip_target if ip_target else 'Local'}")
 
@@ -135,10 +174,20 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--file', type=str, help='IP file to process')
     parser.add_argument('-b', '--blacklist', type=str, help='Custom ISP blacklist file (.txt)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output (print raw API JSON)')
+    parser.add_argument('--api', type=str, choices=['ipwhois', 'ipapi'], default='ipwhois', help='Select the API engine (default: ipwhois with TLS)')
 
     # Read user args
     args = parser.parse_args()
 
+    # API Security Check
+    if args.api == 'ipapi':
+        print("\n[!] WARNING: You selected the 'ipapi' engine which uses unencrypted HTTP.")
+        print("Your traffic (including the IPs you track) could be intercepted (MITM).")
+        consent = input("Do you want to proceed without TLS? [y/N]: ").strip().lower()
+        if consent != 'y':
+            print("[*] Operation cancelled by the user. Enforcing secure defaults.")
+            sys.exit(0)
+    
     # Load Custom Blacklist
     active_blacklist = DEFAULT_BLACKLIST
     if args.blacklist:
@@ -148,13 +197,13 @@ if __name__ == "__main__":
 
     # Routing
     if args.file:
-        process_file(args.file, active_blacklist, args.verbose)
+        process_file(args.file, active_blacklist, args.verbose, args.api)
 
     elif args.input_ip:
         if not is_valid_public_ip(args.input_ip):
             sys.exit(1)
 
-        execute_ip_lookup(args.input_ip, active_blacklist, args.verbose)
+        execute_ip_lookup(args.input_ip, active_blacklist, args.verbose, args.api)
 
     else:
         print("\n[!] WARNING: You are about to query your local machine's public IP.")
@@ -162,7 +211,7 @@ if __name__ == "__main__":
         consent = input("Do you want to proceed? [y/N]: ").strip().lower()
 
         if consent == 'y':
-            execute_ip_lookup("", active_blacklist, args.verbose)
+            execute_ip_lookup("", active_blacklist, args.verbose, args.api)
         else:
             print("[*] Operation cancelled by the user. Stay safe.")
             sys.exit(0)
