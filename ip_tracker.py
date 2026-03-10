@@ -8,6 +8,13 @@ import socket
 import argparse
 import time
 
+class Colors:
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    BLUE = '\033[94m'
+    YELLOW = '\033[93m'
+    RESET = '\033[0m'
+
 API_ENDPOINTS = {
         'ipwhois': 'https://ipwho.is/',
         'ipapi': 'http://ip-api.com/json/'
@@ -53,10 +60,10 @@ def resolve_target(target):
     try:
         resolved_ip = socket.gethostbyname(target)
         if resolved_ip != target:
-            print(f"[*] Resolved hostname '{target}' to IP: {resolved_ip}")
+            print(f"{Colors.BLUE}[*]{Colors.RESET} Resolved hostname '{target}' to IP: {resolved_ip}")
         return resolved_ip
     except socket.gaierror:
-        print(f"[!] Unable to resolve hostname: {target}")
+        print(f"{Colors.YELLOW}[!]{Colors.RESET} Unable to resolve hostname: {target}")
         return None
 
 def is_valid_public_ip(ip_input):
@@ -65,26 +72,26 @@ def is_valid_public_ip(ip_input):
         # Verify IP object creation
         ip_obj = ipaddress.ip_address(ip_input)
         if ip_obj.is_private or ip_obj.is_loopback:
-            print(f"[!] The IP {ip_input} is private or loopback")
+            print(f"{Colors.YELLOW}[!]{Colors.RESET} The IP {ip_input} is private or loopback")
             return False
 
         return True
 
     except ValueError:
-        print(f"[!] Invalid IP format: {ip_input}")
+        print(f"{Colors.YELLOW}[!]{Colors.RESET} Invalid IP format: {ip_input}")
         return False
 
 
 def get_ip_info(ip_target="", api_engine='ipwhois'):
     # The public API we are using
     url = f"{API_ENDPOINTS[api_engine]}{ip_target}"
-    print(f"[*] Establishing connection to {url}...")
+    print(f"{Colors.BLUE}[*]{Colors.RESET} Establishing connection to {url}...")
 
     try:
         with urllib.request.urlopen(url, timeout=API_TIMEOUT_SECS) as response:
             return json.loads(response.read())
     except Exception as e:
-        print(f"[!] Connection error: {e}")
+        print(f"{Colors.YELLOW}[!]{Colors.RESET} Connection error: {e}")
         return None
 
 def is_datacenter_isp(isp, org, blacklist):
@@ -105,16 +112,16 @@ def print_info(ip_info, blacklist=None):
     lon_response = ip_info.get('longitude', 'Unknown')
 
     print(f"""
-[+] Target IP: {ip_response}
-[+] Country: {country_response}
-[+] Region: {region_response}
-[+] City: {city_response}
-[+] ISP: {isp_response}
-[+] ORG: {org_response}
-[+] Coordinates: {lat_response}, {lon_response}""")
+{Colors.GREEN}[+]{Colors.RESET} Target IP: {ip_response}
+{Colors.GREEN}[+]{Colors.RESET} Country: {country_response}
+{Colors.GREEN}[+]{Colors.RESET} Region: {region_response}
+{Colors.GREEN}[+]{Colors.RESET} City: {city_response}
+{Colors.GREEN}[+]{Colors.RESET} ISP: {isp_response}
+{Colors.GREEN}[+]{Colors.RESET} ORG: {org_response}
+{Colors.GREEN}[+]{Colors.RESET} Coordinates: {lat_response}, {lon_response}""")
 
     if is_datacenter_isp(isp_response, org_response, blacklist):
-        print("\n[!] WARNING: Datacenter or Cloud provider detected (Possible VPN/Proxy)")
+        print(f"\n{Colors.RED}[!] WARNING: Datacenter or Cloud provider detected (Possible VPN/Proxy){Colors.RESET}")
 
     print("-" * 50)
 
@@ -132,14 +139,14 @@ def execute_ip_lookup(ip_target="", blacklist=None, verbose=False, api_engine='i
             print_info(normalized_result, blacklist)
             return normalized_result
         else:
-            print(f"[!] Target IP {ip_target} not found or invalid via {api_engine}.")
+            print(f"{Colors.YELLOW}[!]{Colors.RESET} Target IP {ip_target} not found or invalid via {api_engine}.")
             return None
     else:
-        print(f"[!] Empty Information for IP: {ip_target if ip_target else 'Local'}")
+        print(f"{Colors.YELLOW}[!]{Colors.RESET} Empty Information for IP: {ip_target if ip_target else 'Local'}")
         return None
 
 def process_file(file_path, blacklist=None, verbose=False, api_engine='ipwhois'):
-    print(f"[*] Reading IP file: {file_path}")
+    print(f"{Colors.BLUE}[*]{Colors.RESET} Reading IP file: {file_path}")
     processed = 0
     skipped = 0
 
@@ -172,7 +179,7 @@ def process_file(file_path, blacklist=None, verbose=False, api_engine='ipwhois')
         return results_list
 
     except FileNotFoundError:
-        print(f"[!] Error: The file was not found: '{file_path}'")
+        print(f"{Colors.YELLOW}[!]{Colors.RESET} Error: The file was not found: '{file_path}'")
 
 def load_custom_blacklist(file_path):
     custom_list = []
@@ -182,20 +189,20 @@ def load_custom_blacklist(file_path):
                 keyword = line.strip().lower()
                 if keyword:
                     custom_list.append(keyword)
-        print(f"[*] Loaded custom blacklist with {len(custom_list)} keywords.")
+        print(f"{Colors.BLUE}[*]{Colors.RESET} Loaded custom blacklist with {len(custom_list)} keywords.")
         return custom_list
     except FileNotFoundError:
-        print(f"[!] Error: Custom blacklist file '{file_path}' not found. Using default list")
+        print(f"{Colors.YELLOW}[!]{Colors.RESET} Error: Custom blacklist file '{file_path}' not found. Using default list")
         return None
 
 def export_results(results, format_type):
     if not results:
-        print("[!] No valid data to export.")
+        print(f"{Colors.YELLOW}[!]{Colors.RESET} No valid data to export.")
         return
         
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     filename = f"tracker_report_{timestamp}.{format_type}"
-    print(f"\n[*] Exporting {len(results)} results to {filename}...")
+    print(f"\n{Colors.BLUE}[*]{Colors.RESET} Exporting {len(results)} results to {filename}...")
     
     if format_type == 'json':
         with open(filename, 'w') as f:
@@ -208,7 +215,7 @@ def export_results(results, format_type):
             dict_writer.writeheader()
             dict_writer.writerows(results)
             
-    print(f"[+] Export complete: {filename}")
+    print(f"{Colors.GREEN}[+]{Colors.RESET} Export complete: {filename}")
 
 if __name__ == "__main__":
     # Parser Definition
@@ -225,11 +232,11 @@ if __name__ == "__main__":
 
     # API Security Check
     if args.api == 'ipapi':
-        print("\n[!] WARNING: You selected the 'ipapi' engine which uses unencrypted HTTP.")
+        print(f"\n{Colors.YELLOW}[!]{Colors.RESET} WARNING: You selected the 'ipapi' engine which uses unencrypted HTTP.")
         print("Your traffic (including the IPs you track) could be intercepted (MITM).")
         consent = input("Do you want to proceed without TLS? [y/N]: ").strip().lower()
         if consent != 'y':
-            print("[*] Operation cancelled by the user. Enforcing secure defaults.")
+            print(f"{Colors.BLUE}[*]{Colors.RESET} Operation cancelled by the user. Enforcing secure defaults.")
             sys.exit(0)
     
     # Load Custom Blacklist
@@ -256,7 +263,7 @@ if __name__ == "__main__":
             export_results([result_data], args.output)
 
     else:
-        print("\n[!] WARNING: You are about to query your local machine's public IP.")
+        print(f"\n{Colors.YELLOW}[!]{Colors.RESET} WARNING: You are about to query your local machine's public IP.")
         print("This will expose your IP to a third-party API (ipwho.is).")
         consent = input("Do you want to proceed? [y/N]: ").strip().lower()
 
@@ -265,5 +272,5 @@ if __name__ == "__main__":
             if args.output and result_data:
                 export_results([result_data], args.output)
         else:
-            print("[*] Operation cancelled by the user. Stay safe.")
+            print(f"{Colors.BLUE}[*]{Colors.RESET} Operation cancelled by the user. Stay safe.")
             sys.exit(0)
