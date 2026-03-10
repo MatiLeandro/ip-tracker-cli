@@ -30,6 +30,17 @@ DEFAULT_BLACKLIST = ['amazon', 'aws', 'digitalocean', 'linode', 'hetzner',
     'microsoft', 'azure', 'alibaba', 'tencent', 'hosting', 'datacenter']
  
 def normalize_api_response(raw_data, api_engine):
+    """
+    Standardizes responses from different IP lookup APIs into a unified format.
+
+    Args:
+        raw_data (dict): The raw JSON response from the API.
+        api_engine (str): The name of the API engine used ('ipwhois' or 'ipapi').
+
+    Returns:
+        dict: A flattened dictionary containing standard keys (ip, country, isp, org, etc.)
+    """
+
     normalized = {}
     
     if api_engine == 'ipwhois':
@@ -57,6 +68,17 @@ def normalize_api_response(raw_data, api_engine):
     return normalized
 
 def resolve_target(target):
+    """
+    Attempts to resolve a hostname or domain to its corresponding IPv4 address.
+    If the input is already a valid IP, it returns it unchanged.
+
+    Args:
+        target (str): The hostname or IP address to resolve.
+
+    Returns:
+        str: The resolved IPv4 address, or None if resolution fails.
+    """
+
     try:
         resolved_ip = socket.gethostbyname(target)
         if resolved_ip != target:
@@ -67,6 +89,17 @@ def resolve_target(target):
         return None
 
 def is_valid_public_ip(ip_input):
+    """
+    Validates if the provided string is a properly formatted, public IPv4/IPv6 address.
+    Rejects private (LAN) and loopback (localhost) addresses for security.
+
+    Args:
+        ip_input (str): The IP address string to validate.
+
+    Returns:
+        bool: True if it's a valid public IP, False otherwise.
+    """
+
     # Verify valid and public ip input
     try:
         # Verify IP object creation
@@ -83,6 +116,17 @@ def is_valid_public_ip(ip_input):
 
 
 def get_ip_info(ip_target="", api_engine='ipwhois'):
+    """
+    Establishes an HTTP/HTTPS connection to the selected IP geolocation API.
+
+    Args:
+        ip_target (str, optional): The target IP to look up. Defaults to empty (local IP).
+        api_engine (str, optional): The API engine to use ('ipwhois' or 'ipapi').
+
+    Returns:
+        dict: The raw JSON response parsed into a Python dictionary, or None if connection fails.
+    """
+
     # The public API we are using
     url = f"{API_ENDPOINTS[api_engine]}{ip_target}"
     print(f"{Colors.BLUE}[*]{Colors.RESET} Establishing connection to {url}...")
@@ -95,10 +139,30 @@ def get_ip_info(ip_target="", api_engine='ipwhois'):
         return None
 
 def is_datacenter_isp(isp, org, blacklist):
+    """
+    Scans the ISP and Organization names against a threat intelligence blacklist.
+
+    Args:
+        isp (str): The Internet Service Provider name.
+        org (str): The Organization name owning the IP.
+        blacklist (list): A list of keywords associated with Datacenters, VPNs, or Proxies.
+
+    Returns:
+        bool: True if a match is found in the blacklist, False otherwise.
+    """
+
     combined_text = f"{isp} {org}".lower()
     return any(keyword in combined_text for keyword in blacklist)
 
 def print_info(ip_info, blacklist=None):
+    """
+    Formats and prints the normalized IP information to the terminal with ANSI colors.
+    Triggers the threat intelligence check to warn about Datacenters/VPNs.
+
+    Args:
+        ip_info (dict): The normalized dictionary containing the IP data.
+        blacklist (list, optional): The list of threat intel keywords to check against.
+    """
 
     ip_response = ip_info.get('ip', 'N/A')
     country_response = ip_info.get('country', 'Unknown')
@@ -126,6 +190,20 @@ def print_info(ip_info, blacklist=None):
     print("-" * 50)
 
 def execute_ip_lookup(ip_target="", blacklist=None, verbose=False, api_engine='ipwhois'):
+    """
+    Orchestrates the complete lifecycle of a single IP lookup:
+    Fetch -> Normalize -> Print -> Return.
+
+    Args:
+        ip_target (str, optional): The IP address to analyze.
+        blacklist (list, optional): Custom threat intel keyword list.
+        verbose (bool, optional): If True, prints the raw JSON response before normalizing.
+        api_engine (str, optional): The selected API engine.
+
+    Returns:
+        dict: The normalized IP data if successful, None otherwise.
+    """
+
     raw_result = get_ip_info(ip_target, api_engine)
 
     if raw_result is not None:
@@ -146,6 +224,19 @@ def execute_ip_lookup(ip_target="", blacklist=None, verbose=False, api_engine='i
         return None
 
 def process_file(file_path, blacklist=None, verbose=False, api_engine='ipwhois'):
+    """
+    Reads a file containing IPs or Hostnames, resolves them, and processes them sequentially.
+
+    Args:
+        file_path (str): The path to the text file containing the targets.
+        blacklist (list, optional): Custom threat intel keyword list.
+        verbose (bool, optional): If True, prints raw JSON responses.
+        api_engine (str, optional): The selected API engine.
+
+    Returns:
+        list: A list of dictionaries containing the normalized results for all processed targets.
+    """
+
     print(f"{Colors.BLUE}[*]{Colors.RESET} Reading IP file: {file_path}")
     processed = 0
     skipped = 0
@@ -182,6 +273,16 @@ def process_file(file_path, blacklist=None, verbose=False, api_engine='ipwhois')
         print(f"{Colors.YELLOW}[!]{Colors.RESET} Error: The file was not found: '{file_path}'")
 
 def load_custom_blacklist(file_path):
+    """
+    Loads a custom list of threat intelligence keywords from a local text file.
+
+    Args:
+        file_path (str): The path to the custom blacklist .txt file.
+
+    Returns:
+        list: A list of lowercase keywords, or None if the file is not found.
+    """
+
     custom_list = []
     try:
         with open(file_path, 'r') as file:
@@ -196,6 +297,15 @@ def load_custom_blacklist(file_path):
         return None
 
 def export_results(results, format_type):
+    """
+    Exports the gathered intelligence into a structured CSV or JSON file.
+    Automatically appends a timestamp to the filename to prevent overwriting.
+
+    Args:
+        results (list): A list of dictionaries containing the normalized IP data.
+        format_type (str): The desired output format ('csv' or 'json').
+    """
+
     if not results:
         print(f"{Colors.YELLOW}[!]{Colors.RESET} No valid data to export.")
         return
