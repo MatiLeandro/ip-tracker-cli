@@ -21,43 +21,59 @@ Una herramienta de reconocimiento de red (OSINT) y Threat Intelligence por líne
 
 Cloná el repositorio en tu máquina local:
 
+``` bash
 git clone https://github.com/MatiLeandro/ip-tracker-cli.git
 cd ip-tracker-cli
+```
 
 *(Opcional pero recomendado para sistemas UNIX)* Dale permisos de ejecución:
 
+``` bash
 chmod +x ip_tracker.py
+```
 
 ## 💻 Uso
 
 El script utiliza el módulo nativo argparse. Para ver el menú completo de ayuda:
 
+``` bash
 python3 ip_tracker.py -h
+```
 
 ### 1. Rastreo Individual (Dominios o IPs)
 
+``` bash
 python3 ip_tracker.py -i scanme.nmap.org
 python3 ip_tracker.py -i 8.8.8.8
+```
 
 ### 2. Análisis Masivo y Exportación a CSV
 Ideal para procesar listas de IPs extraídas de logs. Generará un archivo tracker_report_YYYYMMDD_HHMMSS.csv.
 
+``` bash
 python3 ip_tracker.py -f atacantes.txt -o csv
+```
 
 ### 3. Cambiar el Motor de API y Exportar a JSON
 
+``` bash
 python3 ip_tracker.py -i 1.1.1.1 --api ipapi -o json
+```
 
 ### 4. Threat Intel con Lista Personalizada y Modo Debug
 Inyectá tu propia lista de ISPs sospechosos (ej. mis_isps.txt) y usá -v para ver el JSON crudo de la API.
 
+``` bash
 python3 ip_tracker.py -i 8.8.8.8 -b mis_isps.txt -v
+```
 
 *(Si no usas -b, el script utilizará una lista robusta interna por defecto).*
 
 Para verificar tu propia huella pública (requiere confirmación interactiva), ejecutá:
 
+``` bash
 python3 ip_tracker.py
+```
 
 ## 🛡️ Mecanismos de Seguridad y OpSec
 El motor interceptará configuraciones riesgosas o erróneas en tiempo de ejecución:
