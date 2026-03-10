@@ -3,6 +3,7 @@ import urllib.request
 import json
 import sys
 import ipaddress
+import socket
 import argparse
 import time
 
@@ -46,6 +47,16 @@ def normalize_api_response(raw_data, api_engine):
         normalized['longitude'] = raw_data.get('lon', 'Unknown')
 
     return normalized
+
+def resolve_target(target):
+    try:
+        resolved_ip = socket.gethostbyname(target)
+        if resolved_ip != target:
+            print(f"[*] Resolved hostname '{target}' to IP: {resolved_ip}")
+        return resolved_ip
+    except socket.gaierror:
+        print(f"[!] Unable to resolve hostname: {target}")
+        return None
 
 def is_valid_public_ip(ip_input):
     # Verify valid and public ip input
@@ -140,8 +151,10 @@ def process_file(file_path, blacklist=None, verbose=False):
 
                 print(f"\n--- Researching: {target_ip} ---")
 
-                if is_valid_public_ip(target_ip):
-                    execute_ip_lookup(target_ip, blacklist, verbose)
+                resolved_ip = resolve_target(target_ip)
+
+                if resolved_ip and is_valid_public_ip(resolved_ip):
+                    execute_ip_lookup(resolved_ip, blacklist, verbose, api_engine)
                     processed += 1
                     time.sleep(RATE_LIMIT_DELAY)
                 else:
@@ -200,10 +213,11 @@ if __name__ == "__main__":
         process_file(args.file, active_blacklist, args.verbose, args.api)
 
     elif args.input_ip:
-        if not is_valid_public_ip(args.input_ip):
+        resolved_ip = resolve_target(args.input_ip)
+        if not resolved_ip or not is_valid_public_ip(resolved_ip):
             sys.exit(1)
 
-        execute_ip_lookup(args.input_ip, active_blacklist, args.verbose, args.api)
+        execute_ip_lookup(resolved_ip, active_blacklist, args.verbose, args.api)
 
     else:
         print("\n[!] WARNING: You are about to query your local machine's public IP.")
