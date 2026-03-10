@@ -193,7 +193,8 @@ def export_results(results, format_type):
         print("[!] No valid data to export.")
         return
         
-    filename = f"tracker_report.{format_type}"
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    filename = f"tracker_report_{timestamp}.{format_type}"
     print(f"\n[*] Exporting {len(results)} results to {filename}...")
     
     if format_type == 'json':
@@ -249,7 +250,10 @@ if __name__ == "__main__":
         if not resolved_ip or not is_valid_public_ip(resolved_ip):
             sys.exit(1)
 
-        execute_ip_lookup(resolved_ip, active_blacklist, args.verbose, args.api)
+        result_data = execute_ip_lookup(resolved_ip, active_blacklist, args.verbose, args.api)
+        
+        if args.output and result_data:
+            export_results([result_data], args.output)
 
     else:
         print("\n[!] WARNING: You are about to query your local machine's public IP.")
@@ -257,7 +261,9 @@ if __name__ == "__main__":
         consent = input("Do you want to proceed? [y/N]: ").strip().lower()
 
         if consent == 'y':
-            execute_ip_lookup("", active_blacklist, args.verbose, args.api)
+            result_data = execute_ip_lookup("", active_blacklist, args.verbose, args.api)
+            if args.output and result_data:
+                export_results([result_data], args.output)
         else:
             print("[*] Operation cancelled by the user. Stay safe.")
             sys.exit(0)
