@@ -86,9 +86,9 @@ def get_ip_info(ip_target="", api_engine='ipwhois'):
         print(f"[!] Connection error: {e}")
         return None
 
-def is_datacenter_isp(isp, blacklist):
-    isp_lower = isp.lower()
-    return any(keyword in isp_lower for keyword in blacklist)
+def is_datacenter_isp(isp, org, blacklist):
+    combined_text = f"{isp} {org}".lower()
+    return any(keyword in combined_text for keyword in blacklist)
 
 def print_info(ip_info, blacklist=None):
 
@@ -97,9 +97,8 @@ def print_info(ip_info, blacklist=None):
     region_response = ip_info.get('region', 'Unknown')
     city_response = ip_info.get('city', 'Unknown')
     
-    connection_info_response = ip_info.get('connection', {})
-    isp_response = connection_info_response.get('isp', 'Unknown')
-    org_response = connection_info_response.get('org', 'Unknown')
+    isp_response = ip_info.get('isp', 'Unknown')
+    org_response = ip_info.get('org', 'Unknown')
 
     lat_response = ip_info.get('latitude', 'Unknown')
     lon_response = ip_info.get('longitude', 'Unknown')
@@ -113,7 +112,7 @@ def print_info(ip_info, blacklist=None):
 [+] ORG: {org_response}
 [+] Coordinates: {lat_response}, {lon_response}""")
 
-    if is_datacenter_isp(isp_response, blacklist):
+    if is_datacenter_isp(isp_response, org_response, blacklist):
         print("\n[!] WARNING: Datacenter or Cloud provider detected (Possible VPN/Proxy)")
 
     print("-" * 50)
@@ -135,7 +134,7 @@ def execute_ip_lookup(ip_target="", blacklist=None, verbose=False, api_engine='i
     else:
         print(f"[!] Empty Information for IP: {ip_target if ip_target else 'Local'}")
 
-def process_file(file_path, blacklist=None, verbose=False):
+def process_file(file_path, blacklist=None, verbose=False, api_engine='ipwhois'):
     print(f"[*] Reading IP file: {file_path}")
     processed = 0
     skipped = 0
