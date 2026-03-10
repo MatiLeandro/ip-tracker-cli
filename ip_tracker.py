@@ -76,14 +76,16 @@ def print_info(ip_info, blacklist=None):
 
     print("-" * 50)
 
-def execute_ip_lookup(ip_target="", blacklist=None):
+def execute_ip_lookup(ip_target="", blacklist=None, verbose=False):
     result = get_ip_info(ip_target)
+    if verbose and result:
+        print(f"\n[DEBUG] Raw API Response:\n{json.dumps(result, indent=2)}")
     if result is not None and result.get(API_SUCCESS_KEY):
         print_info(result, blacklist)
     else:
         print(f"[!] Empty Information for IP: {ip_target if ip_target else 'Local'}")
 
-def process_file(file_path, blacklist=None):
+def process_file(file_path, blacklist=None, verbose=False):
     print(f"[*] Reading IP file: {file_path}")
     processed = 0
     skipped = 0
@@ -100,7 +102,7 @@ def process_file(file_path, blacklist=None):
                 print(f"\n--- Researching: {target_ip} ---")
 
                 if is_valid_public_ip(target_ip):
-                    execute_ip_lookup(target_ip, blacklist)
+                    execute_ip_lookup(target_ip, blacklist, verbose)
                     processed += 1
                     time.sleep(RATE_LIMIT_DELAY)
                 else:
@@ -132,6 +134,7 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input_ip', type=str, help='Specific input IP')
     parser.add_argument('-f', '--file', type=str, help='IP file to process')
     parser.add_argument('-b', '--blacklist', type=str, help='Custom ISP blacklist file (.txt)')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output (print raw API JSON)')
 
     # Read user args
     args = parser.parse_args()
@@ -145,13 +148,13 @@ if __name__ == "__main__":
 
     # Routing
     if args.file:
-        process_file(args.file, active_blacklist)
+        process_file(args.file, active_blacklist, args.verbose)
 
     elif args.input_ip:
         if not is_valid_public_ip(args.input_ip):
             sys.exit(1)
 
-        execute_ip_lookup(args.input_ip, active_blacklist)
+        execute_ip_lookup(args.input_ip, active_blacklist, args.verbose)
 
     else:
         print("\n[!] WARNING: You are about to query your local machine's public IP.")
@@ -159,7 +162,7 @@ if __name__ == "__main__":
         consent = input("Do you want to proceed? [y/N]: ").strip().lower()
 
         if consent == 'y':
-            execute_ip_lookup("", active_blacklist)
+            execute_ip_lookup("", active_blacklist, args.verbose)
         else:
             print("[*] Operation cancelled by the user. Stay safe.")
             sys.exit(0)
