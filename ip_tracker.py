@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import urllib.request
 import json
+import csv
 import sys
 import ipaddress
 import socket
@@ -129,15 +130,20 @@ def execute_ip_lookup(ip_target="", blacklist=None, verbose=False, api_engine='i
 
         if normalized_result.get(API_SUCCESS_KEY):
             print_info(normalized_result, blacklist)
+            return normalized_result
         else:
             print(f"[!] Target IP {ip_target} not found or invalid via {api_engine}.")
+            return None
     else:
         print(f"[!] Empty Information for IP: {ip_target if ip_target else 'Local'}")
+        return None
 
 def process_file(file_path, blacklist=None, verbose=False, api_engine='ipwhois'):
     print(f"[*] Reading IP file: {file_path}")
     processed = 0
     skipped = 0
+
+    results_list = []
 
     try:
         with open(file_path, 'r') as file:
@@ -153,7 +159,9 @@ def process_file(file_path, blacklist=None, verbose=False, api_engine='ipwhois')
                 resolved_ip = resolve_target(target_ip)
 
                 if resolved_ip and is_valid_public_ip(resolved_ip):
-                    execute_ip_lookup(resolved_ip, blacklist, verbose, api_engine)
+                    result_data = execute_ip_lookup(resolved_ip, blacklist, verbose, api_engine)
+                    if result_data:
+                        results_list.append(result_data)
                     processed += 1
                     time.sleep(RATE_LIMIT_DELAY)
                 else:
@@ -161,6 +169,7 @@ def process_file(file_path, blacklist=None, verbose=False, api_engine='ipwhois')
 
         total = processed + skipped
         print(f"\n[+] Done -- Processed: {processed} | Skipped: {skipped} | Total: {total}")
+        return results_list
 
     except FileNotFoundError:
         print(f"[!] Error: The file was not found: '{file_path}'")
@@ -179,6 +188,27 @@ def load_custom_blacklist(file_path):
         print(f"[!] Error: Custom blacklist file '{file_path}' not found. Using default list")
         return None
 
+def export_results(results, format_type):
+    if not results:
+        print("[!] No valid data to export.")
+        return
+        
+    filename = f"tracker_report.{format_type}"
+    print(f"\n[*] Exporting {len(results)} results to {filename}...")
+    
+    if format_type == 'json':
+        with open(filename, 'w') as f:
+            json.dump(results, f, indent=4)
+            
+    elif format_type == 'csv':
+        keys = results[0].keys()
+        with open(filename, 'w', newline='') as f:
+            dict_writer = csv.DictWriter(f, fieldnames=keys)
+            dict_writer.writeheader()
+            dict_writer.writerows(results)
+            
+    print(f"[+] Export complete: {filename}")
+
 if __name__ == "__main__":
     # Parser Definition
     parser = argparse.ArgumentParser(description="IP Tracker OSINT Tool")
@@ -187,6 +217,7 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--blacklist', type=str, help='Custom ISP blacklist file (.txt)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output (print raw API JSON)')
     parser.add_argument('--api', type=str, choices=['ipwhois', 'ipapi'], default='ipwhois', help='Select the API engine (default: ipwhois with TLS)')
+    parser.add_argument('-o', '--output', nargs='?', const='csv', choices=['csv', 'json'], help='Export results to a file (default format: csv)')
 
     # Read user args
     args = parser.parse_args()
@@ -209,7 +240,9 @@ if __name__ == "__main__":
 
     # Routing
     if args.file:
-        process_file(args.file, active_blacklist, args.verbose, args.api)
+        collected_data = process_file(args.file, active_blacklist, args.verbose, args.api)
+        if args.output and collected_data:
+            export_results(collected_data, args.output)
 
     elif args.input_ip:
         resolved_ip = resolve_target(args.input_ip)
